@@ -130,8 +130,7 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
           };
         };
 
-        const issuesData = (response.data as unknown as IssuesResp).data.group
-          .issues;
+        const issuesData = (response.data as IssuesResp).data.group.issues;
         allIssues = [...allIssues, ...issuesData.nodes];
 
         hasNextPage = issuesData.pageInfo.hasNextPage;
@@ -244,8 +243,8 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
       }
     };
 
-    fetchAllData();
-  }, [startDate, endDate]);
+    if (GITLAB_CONFIG?.GROUP_PATH && TEAM_MEMBERS.length > 0) fetchAllData();
+  }, [startDate, endDate, GITLAB_CONFIG?.GROUP_PATH, TEAM_MEMBERS]);
 
   const processChartData = () => {
     // === 1. Piechart (Kategorie-Zeiten gesamt) ===

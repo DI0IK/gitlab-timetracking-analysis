@@ -3,6 +3,10 @@ version: "3.8"
 services:
   app:
     image: ghcr.io/di0ik/gitlab-timetracking-analysis:main
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
     env_file:
       - .env
     environment:
