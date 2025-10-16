@@ -63,6 +63,8 @@ export async function GET() {
     DEVIATION_THRESHOLDS,
     DISPLAY_CONFIG,
     KPI_LABELS,
+    START_DATE: process.env.START_DATE || null,
+    END_DATE: process.env.END_DATE || null,
   };
 
   return NextResponse.json(payload);

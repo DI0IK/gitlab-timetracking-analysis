@@ -39,6 +39,8 @@ export type RuntimeClientConfig = {
   DISPLAY_CONFIG?: Record<string, number>;
   KPI_LABELS?: Record<string, string>;
   DEVIATION_THRESHOLDS?: Record<string, number>;
+  START_DATE?: string | null;
+  END_DATE?: string | null;
 };
 
 const RuntimeConfigContext = createContext<{

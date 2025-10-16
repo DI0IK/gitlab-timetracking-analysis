@@ -1,16 +1,26 @@
 import TimeTrackingDashboard from "@/components/TimeTrackingDashboard";
-
-function parseEnvDate(key: string, fallback: string) {
-  const raw = process.env[key] ?? fallback;
-  const d = new Date(raw);
-  if (isNaN(d.getTime())) return new Date(fallback);
-  return d;
-}
+import { useRuntimeConfig } from "../lib/runtimeConfig";
 
 export default function Home() {
-  // These env vars are read server-side. Use ISO date strings (YYYY-MM-DD).
-  const startDate = parseEnvDate("START_DATE", "2024-10-01");
-  const endDate = parseEnvDate("END_DATE", "2025-07-01");
+  const { config } = useRuntimeConfig();
 
-  return <TimeTrackingDashboard startDate={startDate} endDate={endDate} />;
+  if (!config) return <div>Loading configuration...</div>;
+
+  const startDate = config?.START_DATE
+    ? new Date(config.START_DATE)
+    : undefined;
+  const endDate = config?.END_DATE ? new Date(config.END_DATE) : undefined;
+
+  if (startDate && isNaN(startDate.getTime())) {
+    console.error("Invalid START_DATE in configuration:", config.START_DATE);
+  }
+  if (endDate && isNaN(endDate.getTime())) {
+    console.error("Invalid END_DATE in configuration:", config.END_DATE);
+  }
+
+  if (!startDate || !endDate) {
+    return <div>Configuration error: START_DATE and END_DATE are not set.</div>;
+  } else {
+    return <TimeTrackingDashboard startDate={startDate} endDate={endDate} />;
+  }
 }
