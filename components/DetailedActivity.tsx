@@ -1,6 +1,6 @@
 import React from "react";
-import { CHART_TITLES } from "@/config/dashboardConfig";
-import { HeatmapData } from "@/types/dashboard";
+import { useRuntimeConfig } from "../lib/runtimeConfig";
+import { HeatmapData, RuntimeClientConfig } from "@/types/dashboard";
 
 interface DetailedActivityProps {
   heatmapData: HeatmapData[][];
@@ -13,6 +13,9 @@ const DetailedActivity: React.FC<DetailedActivityProps> = ({
   HEATMAP_COLORS,
   formatTime,
 }) => {
+  const { config, loading } = useRuntimeConfig();
+  if (loading) return null;
+  const { CHART_TITLES } = (config ?? {}) as RuntimeClientConfig;
   const getColorIndex = (value: number) => {
     if (value === 0) return 0;
     if (value < 3600) return 1; // < 1 hour
@@ -30,7 +33,7 @@ const DetailedActivity: React.FC<DetailedActivityProps> = ({
         {/* GitHub-style Activity Heatmap */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 mb-4">
-            {CHART_TITLES.DAILY_ACTIVITY}
+            {CHART_TITLES?.DAILY_ACTIVITY}
           </h4>
           <div className="w-full">
             <div className="w-full">

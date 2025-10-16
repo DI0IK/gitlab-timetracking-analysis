@@ -14,16 +14,8 @@ import {
 } from "date-fns";
 import { de } from "date-fns/locale";
 
-// Import configuration
-import {
-  GITLAB_CONFIG,
-  TEAM_MEMBERS,
-  CATEGORY_MAP,
-  COLORS,
-  TIME_CONFIG,
-  ERROR_MESSAGES,
-  GERMAN_DAYS,
-} from "../config/dashboardConfig";
+// Runtime configuration (fetched from /api/config)
+import { useRuntimeConfig } from "../lib/runtimeConfig";
 
 // Import components
 import ProjectOverview from "./ProjectOverview";
@@ -44,6 +36,7 @@ import {
   AverageTeamMembersData,
   IssueComplexityData,
   HeatmapData,
+  TimeConfig,
 } from "../types/dashboard";
 
 interface TimeTrackingDashboardProps {
@@ -55,10 +48,40 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
   startDate,
   endDate,
 }) => {
+  const { config, loading: configLoading } = useRuntimeConfig();
+
+  // Always declare hooks in the same order
   const [timelogs, setTimelogs] = useState<Timelog[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
+  // timelogsByUser state was unused; keep implementation minimal
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Destructure config safely with optional chaining and defaults
+  const GITLAB_CONFIG = config?.GITLAB_CONFIG;
+  const TEAM_MEMBERS = config?.TEAM_MEMBERS ?? [];
+  const CATEGORY_MAP = config?.CATEGORY_MAP ?? {};
+  const TIME_CONFIG: TimeConfig = (config?.TIME_CONFIG ?? {
+    SECONDS_PER_HOUR: 3600,
+    SECONDS_PER_MINUTE: 60,
+    HOURS_PER_DAY: 8,
+    DAYS_PER_WEEK: 7,
+    DECIMAL_PLACES: 2,
+  }) as TimeConfig;
+  const ERROR_MESSAGES: Record<string, string> = config?.ERROR_MESSAGES ?? {};
+  const GERMAN_DAYS = config?.GERMAN_DAYS ?? [];
+  const COLORS = config?.COLORS ?? { HEATMAP: ["#f7fbff", "#08306b"] };
+  const heatmapColors: string[] = COLORS?.HEATMAP ?? ["#f7fbff", "#08306b"];
+
+  // Fetch issues and timelogs when config is available
+  useEffect(() => {
+    if (configLoading) return;
+    if (!GITLAB_CONFIG?.GROUP_PATH) return;
+
+    // Use the top-level fetchAllIssues implementation
+    fetchAllIssues();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configLoading, GITLAB_CONFIG?.GROUP_PATH]);
 
   const fetchAllIssues = async (): Promise<void> => {
     try {
@@ -67,30 +90,31 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
       let endCursor: string | null = null;
 
       while (hasNextPage) {
+        const groupPath = config?.GITLAB_CONFIG?.GROUP_PATH;
         const response: AxiosResponse = await axios.post(
           "/api/gitlab",
           {
             query: `
-                        {
-                            group(fullPath: "${GITLAB_CONFIG.GROUP_PATH}") {
-                                issues(first: 100, after: ${
-                                  endCursor ? `"${endCursor}"` : "null"
-                                }) {
-                                    nodes {
-                                        title
-                                        iid
-                                        labels { nodes { title } }
-                                        timeEstimate
-                                        totalTimeSpent
-                                    }
-                                    pageInfo {
-                                        hasNextPage
-                                        endCursor
-                                    }
-                                }
-                            }
-                        }
-                    `,
+            {
+              group(fullPath: "${groupPath}") {
+                issues(first: 100, after: ${
+                  endCursor ? `"${endCursor}"` : "null"
+                }) {
+                  nodes {
+                    title
+                    iid
+                    labels { nodes { title } }
+                    timeEstimate
+                    totalTimeSpent
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                }
+              }
+            }
+          `,
           },
           { headers: { "Content-Type": "application/json" } }
         );
@@ -117,7 +141,7 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
       console.log("Total issues fetched:", allIssues.length);
       setIssues(allIssues);
     } catch (_err) {
-      setError(ERROR_MESSAGES.FETCH_ISSUES);
+      setError(ERROR_MESSAGES?.FETCH_ISSUES ?? "Error fetching issues");
       console.error("Error fetching issues:", _err);
     }
   };
@@ -129,41 +153,40 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
       let endCursor: string | null = null;
 
       while (hasNextPage) {
+        const groupPath = config?.GITLAB_CONFIG?.GROUP_PATH;
         const response: AxiosResponse = await axios.post(
           "/api/gitlab",
           {
             query: `
-                        {
-                            group(fullPath: "${GITLAB_CONFIG.GROUP_PATH}") {
-                                timelogs(
-                                    first: 100,
-                                    after: ${
-                                      endCursor ? `"${endCursor}"` : "null"
-                                    },
-                                    startDate: "${startDate.toISOString()}", 
-                                    endDate: "${endDate.toISOString()}", 
-                                    username: "${username}"
-                                ) {
-                                    nodes {
-                                        user { name }
-                                        issue {
-                                            title
-                                            iid
-                                            labels { nodes { title } }
-                                            timeEstimate
-                                            totalTimeSpent
-                                        }
-                                        spentAt
-                                        timeSpent
-                                    }
-                                    pageInfo {
-                                        hasNextPage
-                                        endCursor
-                                    }
-                                }
-                            }
-                        }
-                    `,
+            {
+              group(fullPath: "${groupPath}") {
+                timelogs(
+                  first: 100,
+                  after: ${endCursor ? `"${endCursor}"` : "null"},
+                  startDate: "${startDate.toISOString()}", 
+                  endDate: "${endDate.toISOString()}", 
+                  username: "${username}"
+                ) {
+                  nodes {
+                    user { name }
+                    issue {
+                      title
+                      iid
+                      labels { nodes { title } }
+                      timeEstimate
+                      totalTimeSpent
+                    }
+                    spentAt
+                    timeSpent
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                }
+              }
+            }
+          `,
           },
           { headers: { "Content-Type": "application/json" } }
         );
@@ -208,10 +231,14 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
       try {
         await Promise.all([
           fetchAllIssues(),
-          ...TEAM_MEMBERS.map((username) => fetchTimelogsForUser(username)),
+          ...(Array.isArray(TEAM_MEMBERS)
+            ? TEAM_MEMBERS.map((username: string) =>
+                fetchTimelogsForUser(username)
+              )
+            : []),
         ]);
       } catch (_err) {
-        setError(ERROR_MESSAGES.LOADING_ERROR);
+        setError(ERROR_MESSAGES?.LOADING_ERROR ?? "Loading error");
       } finally {
         setLoading(false);
       }
@@ -566,10 +593,12 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
       })
     );
 
-    const weeklyData = GERMAN_DAYS.map((day, index) => ({
-      day,
-      value: (weeklyPatterns[index] || 0) / TIME_CONFIG.SECONDS_PER_HOUR, // Convert to hours
-    }));
+    const weeklyData: { day: string; value: number }[] = GERMAN_DAYS.map(
+      (day: string, index: number) => ({
+        day,
+        value: (weeklyPatterns[index] || 0) / TIME_CONFIG.SECONDS_PER_HOUR, // Convert to hours
+      })
+    );
 
     // Calculate peak productivity times
     const peakHour = hourlyData.reduce((max, current) =>
@@ -616,7 +645,11 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
   };
 
   if (loading) {
-    return <div className="alert alert--info">{ERROR_MESSAGES.LOADING}</div>;
+    return (
+      <div className="alert alert--info">
+        {ERROR_MESSAGES?.LOADING ?? "Lade Daten"}
+      </div>
+    );
   }
 
   if (error) {
@@ -624,7 +657,11 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
   }
 
   if (timelogs.length === 0) {
-    return <div className="alert alert--warning">{ERROR_MESSAGES.NO_DATA}</div>;
+    return (
+      <div className="alert alert--warning">
+        {ERROR_MESSAGES?.NO_DATA ?? "Keine Daten verfügbar"}
+      </div>
+    );
   }
 
   const {
@@ -645,7 +682,7 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
 
       <DetailedActivity
         heatmapData={heatmapData}
-        HEATMAP_COLORS={[...COLORS.HEATMAP]}
+        HEATMAP_COLORS={[...heatmapColors]}
         formatTime={formatTime}
       />
 
@@ -653,14 +690,14 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
         projectMetrics={projectMetrics}
         lineData={lineData}
         barData={barData}
-        TEAM_COLORS={[...COLORS.TEAM]}
-        COLORS={[...COLORS.PRIMARY]}
+        TEAM_COLORS={[...(COLORS.TEAM ?? [])]}
+        COLORS={[...(COLORS.PRIMARY ?? [])]}
       />
 
       <TeamAndCategories
         pieData={pieData}
         barData={barData}
-        COLORS={[...COLORS.PRIMARY]}
+        COLORS={[...(COLORS.PRIMARY ?? [])]}
       />
 
       <ProductivityAnalysis productivityPatterns={productivityPatterns} />
@@ -668,12 +705,12 @@ const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({
       <TeamCollaboration
         collaborationData={collaborationData}
         averageTeamMembersData={averageTeamMembersData}
-        COLORS={[...COLORS.PRIMARY]}
+        COLORS={[...(COLORS.PRIMARY ?? [])]}
       />
 
       <IssueAnalysis
         issueComplexityData={issueComplexityData}
-        COLORS={[...COLORS.PRIMARY]}
+        COLORS={[...(COLORS.PRIMARY ?? [])]}
       />
 
       <IssueTimeAnalysis issues={issues} />

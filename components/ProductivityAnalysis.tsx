@@ -9,13 +9,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import {
-  CHART_CONFIG,
-  CHART_TITLES,
-  TOOLTIP_LABELS,
-  CHART_LABELS,
-} from "@/config/dashboardConfig";
-import { ProductivityPatterns } from "@/types/dashboard";
+import { useRuntimeConfig } from "../lib/runtimeConfig";
+import { ProductivityPatterns, RuntimeClientConfig } from "@/types/dashboard";
 
 interface ProductivityAnalysisProps {
   productivityPatterns: ProductivityPatterns;
@@ -24,6 +19,10 @@ interface ProductivityAnalysisProps {
 const ProductivityAnalysis: React.FC<ProductivityAnalysisProps> = ({
   productivityPatterns,
 }) => {
+  const { config, loading } = useRuntimeConfig();
+  if (loading) return null;
+  const { CHART_CONFIG, CHART_TITLES, TOOLTIP_LABELS, CHART_LABELS } =
+    (config ?? {}) as RuntimeClientConfig;
   return (
     <div className="bg-white p-4 rounded-lg shadow">
       <h2 className="text-xl font-bold mb-6 text-gray-800">

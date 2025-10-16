@@ -14,12 +14,8 @@ import {
   AreaChart,
   ReferenceLine,
 } from "recharts";
-import {
-  CHART_CONFIG,
-  CHART_TITLES,
-  TOOLTIP_LABELS,
-} from "../config/dashboardConfig";
-import { ProjectMetrics } from "@/types/dashboard";
+import { useRuntimeConfig } from "../lib/runtimeConfig";
+import { ProjectMetrics, RuntimeClientConfig } from "@/types/dashboard";
 
 interface TimeSeriesChartsProps {
   projectMetrics: ProjectMetrics;
@@ -36,6 +32,10 @@ const TimeSeriesCharts: React.FC<TimeSeriesChartsProps> = ({
   TEAM_COLORS,
   COLORS,
 }) => {
+  const { config, loading } = useRuntimeConfig();
+  if (loading) return null;
+  const { CHART_CONFIG, CHART_TITLES, TOOLTIP_LABELS } = (config ??
+    {}) as RuntimeClientConfig;
   return (
     <div className="bg-white p-4 rounded-lg shadow">
       <h2 className="text-xl font-bold mb-6 text-gray-800">

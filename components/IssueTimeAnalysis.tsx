@@ -9,22 +9,27 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import {
-  CHART_CONFIG,
-  CHART_TITLES,
-  TOOLTIP_LABELS,
-  CHART_LABELS,
-  GITLAB_CONFIG,
-  CATEGORIES,
-  DEVIATION_THRESHOLDS,
-} from "@/config/dashboardConfig";
-import { Issue } from "@/types/dashboard";
+import { useRuntimeConfig } from "../lib/runtimeConfig";
+import { Issue, RuntimeClientConfig } from "../types/dashboard";
 
 interface IssueTimeAnalysisProps {
   issues: Issue[];
 }
 
 const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
+  const { config, loading } = useRuntimeConfig();
+  if (loading) return null;
+
+  const {
+    CHART_CONFIG,
+    CHART_TITLES,
+    TOOLTIP_LABELS,
+    CHART_LABELS,
+    GITLAB_CONFIG,
+    CATEGORIES,
+    DEVIATION_THRESHOLDS,
+  } = (config ?? {}) as RuntimeClientConfig;
+
   // Create issue map for efficient lookup
   const issueMap = new Map<string, Issue>();
   issues.forEach((issue) => {
@@ -36,7 +41,7 @@ const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
     const hasMainCategory =
       issue.labels &&
       issue.labels.nodes &&
-      issue.labels.nodes.some((label) =>
+      issue.labels.nodes.some((label: { title: string }) =>
         (Object.values(CATEGORIES) as string[]).includes(label.title)
       );
     const hasTimeData =
@@ -47,7 +52,7 @@ const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
   // Get main category for each issue
   const getMainCategory = (issue: Issue): string => {
     if (!issue.labels || !issue.labels.nodes) return "";
-    const mainCategory = issue.labels.nodes.find((label) =>
+    const mainCategory = issue.labels.nodes.find((label: { title: string }) =>
       (Object.values(CATEGORIES) as string[]).includes(label.title)
     );
     return mainCategory ? mainCategory.title : "";
@@ -88,7 +93,9 @@ const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
   });
 
   // Calculate category comparison data
-  const categoryComparison = Object.values(CATEGORIES).map((category) => {
+  const categoryComparison = Object.values(
+    CATEGORIES as Record<string, string>
+  ).map((category: string) => {
     const categoryIssues = issuesWithDeviation.filter(
       (issue) => issue.mainCategory === category && issue.totalTimeSpent > 0
     );
@@ -110,29 +117,29 @@ const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
   });
 
   // Calculate average deviation per category
-  const averageDeviationPerCategory = Object.values(CATEGORIES).map(
-    (category) => {
-      const categoryIssues = issuesWithDeviation.filter(
-        (issue) =>
-          issue.mainCategory === category &&
-          issue.totalTimeSpent > 0 &&
-          issue.difference !== Infinity
-      );
+  const averageDeviationPerCategory = Object.values(
+    CATEGORIES as Record<string, string>
+  ).map((category: string) => {
+    const categoryIssues = issuesWithDeviation.filter(
+      (issue) =>
+        issue.mainCategory === category &&
+        issue.totalTimeSpent > 0 &&
+        issue.difference !== Infinity
+    );
 
-      const averageDeviation =
-        categoryIssues.length > 0
-          ? categoryIssues.reduce(
-              (sum, issue) => sum + Math.abs(issue.difference),
-              0
-            ) / categoryIssues.length
-          : 0;
+    const averageDeviation =
+      categoryIssues.length > 0
+        ? categoryIssues.reduce(
+            (sum, issue) => sum + Math.abs(issue.difference),
+            0
+          ) / categoryIssues.length
+        : 0;
 
-      return {
-        category,
-        averageDeviation,
-      };
-    }
-  );
+    return {
+      category,
+      averageDeviation,
+    };
+  });
 
   return (
     <div className="bg-white p-4 rounded-lg shadow">
@@ -143,7 +150,7 @@ const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
       {/* Category Comparison Chart */}
       <div className="mb-8">
         <h4 className="text-sm font-medium text-gray-700 mb-2">
-          {CHART_TITLES.TIME_COMPARISON}
+          {CHART_TITLES?.TIME_COMPARISON}
         </h4>
         <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHTS.MEDIUM}>
           <BarChart data={categoryComparison}>
@@ -153,19 +160,19 @@ const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
             <Tooltip
               formatter={(value: number) => [
                 `${value.toFixed(CHART_CONFIG.DECIMAL_PLACES)}h`,
-                TOOLTIP_LABELS.HOURS,
+                TOOLTIP_LABELS?.HOURS,
               ]}
             />
             <Legend />
             <Bar
               dataKey="estimated"
               fill="#8884d8"
-              name={CHART_LABELS.ESTIMATED_TIME}
+              name={CHART_LABELS?.ESTIMATED_TIME}
             />
             <Bar
               dataKey="actual"
               fill="#82ca9d"
-              name={CHART_LABELS.ACTUAL_TIME}
+              name={CHART_LABELS?.ACTUAL_TIME}
             />
           </BarChart>
         </ResponsiveContainer>
@@ -174,7 +181,7 @@ const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
       {/* Average Deviation per Category */}
       <div className="mb-8">
         <h4 className="text-sm font-medium text-gray-700 mb-2">
-          {CHART_LABELS.AVERAGE_DEVIATION}
+          {CHART_LABELS?.AVERAGE_DEVIATION}
         </h4>
         <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHTS.SMALL}>
           <BarChart data={averageDeviationPerCategory}>
@@ -184,7 +191,7 @@ const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
             <Tooltip
               formatter={(value: number) => [
                 `${value.toFixed(CHART_CONFIG.DECIMAL_PLACES)}%`,
-                TOOLTIP_LABELS.DEVIATION,
+                TOOLTIP_LABELS?.DEVIATION,
               ]}
             />
             <Bar
@@ -240,7 +247,7 @@ const IssueTimeAnalysis: React.FC<IssueTimeAnalysisProps> = ({ issues }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <a
-                      href={`${GITLAB_CONFIG.ISSUE_BASE_URL}/${issue.iid}`}
+                      href={`${GITLAB_CONFIG?.ISSUE_BASE_URL}/${issue.iid}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-900"
