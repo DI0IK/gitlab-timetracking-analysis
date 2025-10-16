@@ -3,11 +3,10 @@
 A small dashboard built for a software engineering project at DHBW.
 It provides analysis for issue-based time tracking, which GitLab itself does not natively offer.
 
-
 > [!NOTE]  
 > This project was developed in a short amount of time, so the code quality is not great.  
 > It’s more a "it just works somehow" kind of project.
-> 
+
 ## Features
 
 - 📊 **Project Overview**: Sprint metrics, velocity tracking, and category distribution
@@ -22,74 +21,50 @@ It provides analysis for issue-based time tracking, which GitLab itself does not
 
 ![Dashboard Demo](public/images/dashboard-demo.gif)
 
+## Configuration (env variables)
 
-## Configuration
+This project now uses environment variables for configuration. Sensitive values (like the GitLab token) must be provided as server-side environment variables and are not embedded into client bundles.
 
-### 1. GitLab API Configuration
+Copy the example file and fill in your values:
 
-Edit `config/dashboardConfig.ts` and update the following settings:
-
-```typescript
-export const GITLAB_CONFIG = {
-    API_URL: 'https://gitlab.com/api/graphql',
-    GROUP_PATH: 'your-group/your-project', // Replace with your GitLab group/project path
-    TOKEN: 'your-gitlab-token', // Replace with your GitLab personal access token
-    ISSUE_BASE_URL: 'https://gitlab.com/your-group/your-project/-/issues'
-} as const;
+```bash
+cp .env.example .env
+# then edit .env and set GITLAB_TOKEN
 ```
 
-#### Getting Your GitLab Token
+- GITLAB_TOKEN (required, server-side): your GitLab personal access token with `read_api` scope. Keep this secret.
+- NEXT_PUBLIC_GITLAB_GROUP_PATH (optional): project/group path used for GraphQL queries (visible to client).
+- NEXT_PUBLIC_GITLAB_API_URL / GITLAB_API_URL (optional): API endpoint if using a self-hosted GitLab.
+- NEXT_PUBLIC_GITLAB_ISSUE_BASE_URL (optional): the public issue URL base used to create links.
 
-1. Go to GitLab → Settings → Access Tokens
-2. Create a new token with `read_api` scope
-3. Copy the token and paste it in the config file
+There is a server-side API proxy at `POST /api/gitlab` that forwards GraphQL queries to GitLab using the server-side `GITLAB_TOKEN`. Client code calls this endpoint so the token is never sent to the browser.
 
-### 2. Team Members Configuration
+Other non-secret settings, teams and categories are still configured in `config/dashboardConfig.ts`.
 
-Update the team members list in `config/dashboardConfig.ts`:
+### Running with Docker Compose
 
-```typescript
-export const TEAM_MEMBERS = [
-    "username1",
-    "username2", 
-    "username3",
-    // Add all team member usernames
-] as const;
+Make sure you have copied `.env.example` to `.env` and set `GITLAB_TOKEN`.
+
+Start the app with docker-compose:
+
+```bash
+docker compose up --build -d
 ```
 
-### 3. Date Range Configuration
+The app will be available at http://localhost:3000. To stop it:
 
-Update the date range in `app/page.tsx`:
-
-```typescript
-// Set your desired date range
-const startDate = new Date('2024-01-01'); // Start date
-const endDate = new Date('2024-12-31');   // End date
+```bash
+docker compose down
 ```
-
-### 4. Categories Configuration
-
-The dashboard uses these default categories. You can modify them in `config/dashboardConfig.ts`:
-
-```typescript
-export const CATEGORIES = {
-    REQUIREMENTS_ENGINEERING: "Requirements Engineering",
-    ENTWURF: "Entwurf", 
-    IMPLEMENTATION_TEST: "Implementation & Test",
-    PROJEKTMANAGEMENT: "Projektmanagement"
-} as const;
-```
-
-
 
 > [!WARNING]  
 > Make sure your GitLab issues have labels that match these categories.
-> 
 
 ## Contributing
 
 If you want to improve this projects, feel free to create a fork :)
 
 ## Support
+
 If you need help with setting up the project (for instance the api key or adding the labels to the issues on gitlab), feel free to contact me on discord:
 [cubepixels](https://discord.com/users/cubepixels)
