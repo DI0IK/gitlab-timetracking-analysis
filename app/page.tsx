@@ -1,3 +1,5 @@
+"use client";
+
 import TimeTrackingDashboard from "@/components/TimeTrackingDashboard";
 import { useRuntimeConfig } from "../lib/runtimeConfig";
 
