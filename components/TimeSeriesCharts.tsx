@@ -152,12 +152,8 @@ const TimeSeriesCharts: React.FC<TimeSeriesChartsProps> = ({
             <LineChart
               data={(() => {
                 return [...lineData].sort((a, b) => {
-                  const [weekA, yearA] = String(a.week)
-                    .split(" ")[1]
-                    .split("/");
-                  const [weekB, yearB] = String(b.week)
-                    .split(" ")[1]
-                    .split("/");
+                  const [weekA, yearA] = String(a.week).split(" ").slice(1);
+                  const [weekB, yearB] = String(b.week).split(" ").slice(1);
                   return (
                     parseInt(yearA) * 100 +
                     parseInt(weekA) -
