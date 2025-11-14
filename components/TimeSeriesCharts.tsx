@@ -125,8 +125,11 @@ const TimeSeriesCharts: React.FC<TimeSeriesChartsProps> = ({
                 ]}
               />
               <Legend />
-              {Object.keys(projectMetrics.sprintData[0]?.userHours || {}).map(
-                (user, index) => (
+              {projectMetrics.sprintData
+                .map((s) => Object.keys(s.userHours))
+                .flat()
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .map((user, index) => (
                   <Bar
                     key={user}
                     dataKey={`userHours.${user}`}
@@ -134,8 +137,7 @@ const TimeSeriesCharts: React.FC<TimeSeriesChartsProps> = ({
                     stackId="a"
                     fill={TEAM_COLORS[index % TEAM_COLORS.length]}
                   />
-                )
-              )}
+                ))}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -164,7 +166,9 @@ const TimeSeriesCharts: React.FC<TimeSeriesChartsProps> = ({
             >
               <XAxis
                 dataKey="week"
-                tickFormatter={(value) => `KW ${String(value).split(" ")[1]}`}
+                tickFormatter={(value) =>
+                  `KW ${String(value).split(" ").slice(1).join(" ")}`
+                }
               />
               <YAxis
                 label={{
@@ -179,7 +183,7 @@ const TimeSeriesCharts: React.FC<TimeSeriesChartsProps> = ({
                   TOOLTIP_LABELS.HOURS,
                 ]}
                 labelFormatter={(value: unknown) =>
-                  `Kalenderwoche ${String(value).split(" ")[1]}`
+                  `Kalenderwoche ${String(value).split(" ").slice(1).join(" ")}`
                 }
               />
               <Legend />
